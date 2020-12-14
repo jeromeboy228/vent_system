@@ -67,12 +67,12 @@ double temp()
   digitalWrite(term_power, HIGH); // подаем напряжение на термометр
   delay(100);                     // задержка перед измерением
   sensors.requestTemperatures();  // измерение
-  delay(500);
+  delay(100);
   sensors.requestTemperatures();                         // измерение
   double real_temp = double(sensors.getTempCByIndex(0)); // запись измерения
 
   digitalWrite(term_power, LOW); // отключение питания с термометра
-  delay(400);                    // просто задержка в 5 сек чтоб не перегривался
+  delay(100);                    // просто задержка в 5 сек чтоб не перегривался
 
   return (real_temp);
 }
@@ -99,7 +99,7 @@ BLYNK_WRITE(V1)
   {
     digitalWrite(VENT, LOW);
   }
-  delay(1000);
+  delay(2700);
 }
 
 void loop()
