@@ -84,18 +84,19 @@ void T_control()
 
 BLYNK_WRITE(V1)
 {
+  double temper = temp();
   int value = param.asInt();
   Serial.print("value = ");
   Serial.print(value);
   Serial.print(" temperature = ");
-  Serial.println(temp());
+  Serial.println(temper);
   T_control();
   Blynk.syncVirtual(V1);
-  if (temp() < value - 2)
+  if (temper < value - 2)
   {
     digitalWrite(VENT, HIGH);
   }
-  if (temp() > value + 2)
+  if (temper > value + 2)
   {
     digitalWrite(VENT, LOW);
   }
