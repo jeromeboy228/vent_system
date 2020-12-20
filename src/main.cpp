@@ -50,7 +50,8 @@
 char auth[] = "0UvRgBT1VJArmWx53273nbCVoJXaZsF7";
 OneWire oneWire(ONE_WIRE_BUS);       // Сообщаем библиотеке об устройстве, работающем по протоколу 1-Wire
 DallasTemperature sensors(&oneWire); // Связываем функции библиотеки DallasTemperature с нашим 1-Wire устройством (DS18B20)
-
+int need_temp = 0; // среденее значение температуры, которая необходима в корпусе
+int gester = 0;
 void setup()
 {
 
@@ -59,6 +60,12 @@ void setup()
   pinMode(term_power, OUTPUT); // Определяем пин подключения питания датчика температуры
   pinMode(VENT, OUTPUT);
   Blynk.begin(auth);
+}
+BLYNK_WRITE(V0){
+  need_temp = param.asInt();
+}
+BLYNK_WRITE(V1){
+  gester = param.asInt();
 }
 
 double temp()
@@ -72,39 +79,34 @@ double temp()
   double real_temp = double(sensors.getTempCByIndex(0)); // запись измерения
 
   digitalWrite(term_power, LOW); // отключение питания с термометра
-  delay(100);                    // просто задержка в 5 сек чтоб не перегривался
+  delay(100);                    // просто задержка в 5 сек чтоб не перегревался
 
   return (real_temp);
 }
-void T_control()
+void logic() // функция управления вентиляцией 
 {
-  double temperarura = temp();
-  Blynk.virtualWrite(V0, temperarura);
-}
-
-BLYNK_WRITE(V1)
-{
-  double temper = temp();
-  int value = param.asInt();
-  Serial.print("value = ");
-  Serial.print(value);
-  Serial.print(" temperature = ");
-  Serial.println(temper);
-  T_control();
-  Blynk.syncVirtual(V1);
-  if (temper < value - 2)
+  double t_value = temp();
+  // просто для контроля, после удалить
+  Serial.print("need_t ");
+  Serial.print(need_temp);
+  Serial.print(" gester ");
+  Serial.println(gester);
+  //
+  Blynk.virtualWrite(V3,t_value);
+  if (t_value < need_temp - gester)
   {
-    digitalWrite(VENT, HIGH);
+    digitalWrite(VENT,HIGH);
   }
-  if (temper > value + 2)
+  if (t_value > need_temp + gester)
   {
-    digitalWrite(VENT, LOW);
+    digitalWrite(VENT,LOW);
   }
-  delay(2700);
+  
 }
-
 void loop()
 {
+  Blynk.syncAll();
   Blynk.run();
-//  T_control();
+  logic();
+  delay(3700);
 }
