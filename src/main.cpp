@@ -38,6 +38,7 @@
 #include <Ethernet2.h>
 #include <BlynkSimpleEthernet2.h>
 #include <Arduino.h>
+#include <arduino-timer.h>
 // ПОДКЛЮЧЕНИЕ ЖЕЛТЫЙ 2
 //КРАСНЫЙ 4
 //ЧЕРНЫЙ ЗЕМЛЯ
@@ -46,12 +47,16 @@
 #include <OneWire.h>
 #define ONE_WIRE_BUS 2 // Указываем пин подключения data-вывода датчика температуры
 #define term_power 4   // Указываем пин подключения питания датчика температуры
-#define VENT 8
+#define VENT 7
 char auth[] = "0UvRgBT1VJArmWx53273nbCVoJXaZsF7";
+auto stimer = timer_create_default();
 OneWire oneWire(ONE_WIRE_BUS);       // Сообщаем библиотеке об устройстве, работающем по протоколу 1-Wire
 DallasTemperature sensors(&oneWire); // Связываем функции библиотеки DallasTemperature с нашим 1-Wire устройством (DS18B20)
+BlynkTimer timer;
 int need_temp = 0; // среденее значение температуры, которая необходима в корпусе
 int gester = 0;
+bool logic(void *);
+void Send();
 void setup()
 {
 
@@ -60,6 +65,8 @@ void setup()
   pinMode(term_power, OUTPUT); // Определяем пин подключения питания датчика температуры
   pinMode(VENT, OUTPUT);
   Blynk.begin(auth);
+  timer.setInterval(3000L,Send);
+  stimer.every(3000,logic);
 }
 BLYNK_WRITE(V0){
   need_temp = param.asInt();
@@ -67,32 +74,28 @@ BLYNK_WRITE(V0){
 BLYNK_WRITE(V1){
   gester = param.asInt();
 }
-
+BLYNK_CONNECTED(){
+  Blynk.syncAll();
+}
 double temp()
 {
 
   digitalWrite(term_power, HIGH); // подаем напряжение на термометр
-  delay(100);                     // задержка перед измерением
+  //delay(100);                     // задержка перед измерением
   sensors.requestTemperatures();  // измерение
-  delay(100);
+  //delay(100);
   sensors.requestTemperatures();                         // измерение
   double real_temp = double(sensors.getTempCByIndex(0)); // запись измерения
 
   digitalWrite(term_power, LOW); // отключение питания с термометра
-  delay(100);                    // просто задержка в 5 сек чтоб не перегревался
+  //delay(100);                    // просто задержка в 5 сек чтоб не перегревался
 
   return (real_temp);
 }
-void logic() // функция управления вентиляцией 
+bool logic(void *) // функция управления вентиляцией 
 {
   double t_value = temp();
-  // просто для контроля, после удалить
-  Serial.print("need_t ");
-  Serial.print(need_temp);
-  Serial.print(" gester ");
-  Serial.println(gester);
-  //
-  Blynk.virtualWrite(V3,t_value);
+  
   if (t_value < need_temp - gester)
   {
     digitalWrite(VENT,HIGH);
@@ -101,12 +104,24 @@ void logic() // функция управления вентиляцией
   {
     digitalWrite(VENT,LOW);
   }
-  
+  return true;
+}
+void Send(){
+   double t_value = temp();
+  // просто для контроля, после удалить
+  Serial.print("need_t ");
+  Serial.print(need_temp);
+  Serial.print(" gester ");
+  Serial.println(gester);
+  //
+  Blynk.virtualWrite(V2,t_value);
 }
 void loop()
 {
-  Blynk.syncAll();
+  
   Blynk.run();
-  logic();
-  delay(3700);
+  //logic();
+  stimer.tick();
+  timer.run();
+
 }
